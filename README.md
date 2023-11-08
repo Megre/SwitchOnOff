@@ -7,7 +7,7 @@ A USB-serial-port switch controller, which uses an unsigned byte to represent th
 
 ## Byte Format
 
-## Control Command
+### Control Command
 
 Write a byte to the serial port to control the switch.
 
@@ -21,7 +21,7 @@ The byte `0xC0` means to close the serial port.
 
 
 
-## Response
+### Response
 
 The serial port outputs a byte to identify the state of the switch.
 
