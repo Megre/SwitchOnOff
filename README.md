@@ -1,7 +1,21 @@
 # SwitchOnOff
-![image-20231101091802983](https://renhao-picgo.oss-cn-beijing.aliyuncs.com/img/image-20231101091802983.png)
+![image-20231121145755749](https://renhao-picgo.oss-cn-beijing.aliyuncs.com/img/image-20231121145755749.png)
 
-A USB-serial-port switch controller, which uses an unsigned byte to represent the state of the switch.
+A USB-serial-port switch controller (Windows platform), which uses an [unsigned byte](#Byte Format) to represent the state of the switch.
+
+The CPU [WaterCoolingControlModule](https://github.com/Megre/WaterCoolingControlModule) can be found [here](https://github.com/Megre/WaterCoolingControlModule).
+
+## Usage
+
+- Double click the `Port Name` to connect to the serial port.
+
+- Click the `Auto` button to enable auto mode.
+
+- Click the top-right `Settings` button to open Settings dialog.
+
+![image-20231121150015236](https://renhao-picgo.oss-cn-beijing.aliyuncs.com/img/image-20231121150015236.png)
+
+The `Settings` controls the On/Off condition of each switch, e.g. to switch on the `Fan` once the CPU temperature reaches 75 °C and switch off the `Fan` until the CPU is cooled down to 70 °C.
 
 
 

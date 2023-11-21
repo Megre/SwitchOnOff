@@ -16,24 +16,35 @@ import gnu.io.SerialPortEventListener;
  * @version created on: 2023-10-27 16:15:20
  */
 public class SwitchState implements SerialPortEventListener {
-	private static byte CMD_CLOSE = (byte) 0xC0;
+	private static int CMD_CLOSE = 0xC0;
 	
 	private StatePresenter fPresenter;	
 	
 	private SerialPortUtil fSerialPortUtil = SerialPortUtil.instance();
 	
-	private Queue<Byte> fTaskQueue = new ConcurrentLinkedQueue<Byte>();
+	private Queue<Integer> fTaskQueue = new ConcurrentLinkedQueue<Integer>();
 	private Thread fTaskThread;
 	
+	private CPUTemp fTempDetecter = new CPUTemp();
+	
+	private Config fConfig;
+	
 	// state
-	private byte fData;
+	private int fData;
 	
 	public SwitchState() {
-
+		fConfig = Config.load();
+		if(fConfig.getPortName() != null) {
+			openPort(fConfig.getPortName());
+		}
 	}
 	
-	public void setPresenter(StatePresenter presenter) {
+	public void setPresenter(StatePresenter presenter) {		
 		fPresenter = presenter;
+		
+		if(fPresenter != null) {
+			fPresenter.updateUI(fConfig);
+		}
 	}
 	
 	public ArrayList<String> listSerialPorts() {
@@ -45,12 +56,11 @@ public class SwitchState implements SerialPortEventListener {
 		fSerialPortUtil.open(portname, 4800, 
 				SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
 		fSerialPortUtil.addListener(this);
-		startTasker();
 		return fSerialPortUtil.isOpen();
 	}
 	
 	public void closePort() {
-		pushCmd((byte) 0x80);
+		pushCmd(0x80);
     	pushCmd(CMD_CLOSE);
 	}
 	
@@ -59,7 +69,7 @@ public class SwitchState implements SerialPortEventListener {
     	updateState((byte) 0); 
 	}
 	
-	public void pushCmd(byte cmd) {
+	public void pushCmd(int cmd) {
 		fTaskQueue.add(cmd);
 	}
 	
@@ -70,21 +80,28 @@ public class SwitchState implements SerialPortEventListener {
 			
 		    @Override
 		    public void run() {
-		    	while(true) {
-			    	// push cmd
-			        Byte topCmd = fTaskQueue.poll();
-			        byte cmd = (topCmd==null?0:topCmd);
-			        
-			        if(cmd == CMD_CLOSE) {			        	
-			        	disconnect();
-			        	break;
-			        }
-			        
-			        fCmdArray[0] = cmd;			        
-		        	if(fSerialPortUtil.send(fCmdArray) > 0) {
-		        		if(fCmdArray[0] != 0) updateState(fCmdArray[0]);
-		        	}		        		
-			        
+		    	while(true) {			    				        
+		    		if(fSerialPortUtil.isOpen()) {		
+		    			// pop cmd
+				        Integer topCmd = fTaskQueue.poll();
+				        int cmd = (topCmd==null?0:topCmd);
+				        
+				        if(cmd == CMD_CLOSE) {			        	
+				        	disconnect();
+				        }
+				        
+				        fCmdArray[0] = (byte) cmd;			        
+			        	if(fSerialPortUtil.send(fCmdArray) > 0) {
+			        		if(fCmdArray[0] != 0) updateState(cmd);
+			        	}		    
+		    		}    		
+		        	
+		        	// CPU temprature
+		        	double temp = fTempDetecter.detect();
+		        	fPresenter.updateUI(temp);
+		        	if(isAutoCtrl()) {
+		        		fPresenter.autoCtrl(temp);
+		        	}			        
 			        
 			        // wait
 			        try {
@@ -122,15 +139,37 @@ public class SwitchState implements SerialPortEventListener {
 		return fSerialPortUtil.isOpen();
 	}
 		
-	public byte getData() {
+	public int getData() {
 		return fData;
+	}
+	
+	public boolean isAutoCtrl() {
+		return fConfig.getAutoCtrl();
+	}
+	
+	public void setAutoCtrl(boolean autoCtrl) {
+		fConfig.setAutoCtrl(autoCtrl);
+	}
+	
+	private String getPortName() {
+		return fSerialPortUtil.getPortName();
+	}
+	
+	public Config getConfig() {
+		return fConfig;
+	}
+	
+	public void saveConfig() {
+		fConfig.setAutoCtrl(isAutoCtrl());
+		fConfig.setPortName(getPortName());
+		fConfig.save();
 	}
 	
 	private void updateState(boolean connected){
 		if(fPresenter != null) fPresenter.updateUI(connected);
 	}
 	
-	private void updateState(byte data) {
+	private void updateState(int data) {
 		fData = data;
 		if(fPresenter != null) fPresenter.updateUI(data);
 	}

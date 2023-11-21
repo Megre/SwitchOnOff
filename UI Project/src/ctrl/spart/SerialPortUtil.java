@@ -21,6 +21,7 @@ public class SerialPortUtil {
     private static SerialPortUtil fSerialPortUtil = null;
     
     private SerialPort fSerialPort;
+    private String fPortName;
 
     static {
         if (fSerialPortUtil == null) {
@@ -54,7 +55,8 @@ public class SerialPortUtil {
 
 
     public SerialPort open(String portName, int baudrate, int databits, int stopbatis, int parity) {
-
+    	fPortName = portName;
+    	
         try {
             CommPortIdentifier portIdentifier = CommPortIdentifier.getPortIdentifier(portName);
             CommPort commPort = portIdentifier.open(portName, 2000);
@@ -82,6 +84,8 @@ public class SerialPortUtil {
     }
 
     public void close() {
+        fPortName = null;
+        
         if (fSerialPort != null) { 
             fSerialPort.close();
             fSerialPort = null;
@@ -90,6 +94,12 @@ public class SerialPortUtil {
     
     public boolean isOpen() {
     	return fSerialPort != null;
+    }
+    
+    public String getPortName() {
+    	if(fSerialPort == null) return null;
+    	
+    	return fPortName;
     }
 
     public int send(byte[] order) {
@@ -140,6 +150,8 @@ public class SerialPortUtil {
     }
 
     public void addListener(SerialPortEventListener listener){
+    	if(fSerialPort == null) return;
+    	
         try {
             fSerialPort.addEventListener(listener);
             fSerialPort.notifyOnDataAvailable(true);

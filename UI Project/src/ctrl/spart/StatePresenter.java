@@ -15,6 +15,8 @@ public class StatePresenter {
 	public StatePresenter(SwitchState model, MainApp view) {
 		fModel = model;
 		fView = view;
+		
+		model.setPresenter(this);
 	}
 	
 	public void switchPortOpenState(String portname) {
@@ -27,13 +29,13 @@ public class StatePresenter {
 		
 		// open
 		if(fModel.openPort(portname)) {
-			fModel.pushCmd((byte) 0xff);
+			fModel.pushCmd(0xff);
 		}
 		
 		updateUI(fModel.isConnected());
 	}
 	
-	public void updateUI(byte data) {
+	public void updateUI(int data) {
 		fView.updateUI(data);
 	}
 	
@@ -41,19 +43,52 @@ public class StatePresenter {
 		fView.updateUI(connected);
 	}
 	
+	public void updateUI(double cpuTemp) {
+		fView.updateUI(cpuTemp);
+	}
+	
+	public void updateUI(Config config) {
+		fView.updateUI(config);
+	}
+	
 	public void switchOnOff(int index) {
 		int data = fModel.getData();
-		int cmd = 0x80;
+		int cmd = buildCmd(index, !isOn(index, data), data);
 		
-		for(int i=0; i<MainApp.CTRL_NUM; ++i) {
-			if(index == i) {
-				boolean isOn = isOn(index, data);
-				if(!isOn) cmd |= (1<<index);
-			}
-			else cmd |= (data & (1<<i));
-		}
 		System.out.println(String.format("state: 0x%X", cmd));
-		fModel.pushCmd((byte) cmd);
+		fModel.pushCmd(cmd);
+	}
+	
+	private int buildCmd(int index, boolean switchOn, int data) {
+		int cmd = 0x80 | data;
+		
+		if(switchOn) {
+			cmd = (cmd | (1 << index));
+		}
+		else {
+			cmd = cmd - (cmd & (1 << index));
+		}
+
+		return cmd;
+	}
+	
+	
+	public void autoCtrl(double cpuTemp) {
+		
+		int cmd = fModel.getData();
+		for(int i=0; i<MainApp.CTRL_NUM; ++i) {
+			double startTemp = fModel.getConfig().getStartTemp(i), 
+					stopTemp = fModel.getConfig().getStopTemp(i);
+			
+			if(cpuTemp >= startTemp) {			
+				cmd = buildCmd(i, true, cmd);
+			}
+			else if(cpuTemp <= stopTemp) {
+				cmd = buildCmd(i, false, cmd);			
+			}
+		}
+		
+		fModel.pushCmd(cmd); 
 	}
 	
 	private boolean isOn(int index, int data) {

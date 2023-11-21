@@ -16,4 +16,7 @@ public class Images {
 	public static ImageIcon CONNECT = new ImageIcon(MainApp.class.getResource("/resource/connect.png"));;
 	public static ImageIcon ON = new ImageIcon(MainApp.class.getResource("/resource/switch-on.png"));
 	public static ImageIcon OFF = new ImageIcon(MainApp.class.getResource("/resource/switch-off.png"));
+	public static ImageIcon ON_SMALL = new ImageIcon(MainApp.class.getResource("/resource/switch-on-small.png"));
+	public static ImageIcon OFF_SMALL = new ImageIcon(MainApp.class.getResource("/resource/switch-off-small.png"));
+	public static ImageIcon SETTINGS = new ImageIcon(MainApp.class.getResource("/resource/settings.png"));
 }

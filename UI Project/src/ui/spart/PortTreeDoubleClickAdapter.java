@@ -33,7 +33,7 @@ public class PortTreeDoubleClickAdapter extends MouseAdapter {
             {
             	DefaultMutableTreeNode node = (DefaultMutableTreeNode) selPath.getLastPathComponent();
                 if(node.getLevel() == 0) return;
-                System.out.println(node.toString());
+//                System.out.println(node.toString());
                 
         		EventQueue.invokeLater(new Runnable() {
         			public void run() {
