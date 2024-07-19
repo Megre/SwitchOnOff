@@ -23,7 +23,6 @@ public class StatePresenter {
 		// close
 		if(fModel.isConnected()) {
 			fModel.closePort();
-			updateUI(false);
 			return;
 		}
 		
@@ -31,8 +30,6 @@ public class StatePresenter {
 		if(fModel.openPort(portname)) {
 			fModel.pushCmd(0xff);
 		}
-		
-		updateUI(fModel.isConnected());
 	}
 	
 	public void updateUI(int data) {

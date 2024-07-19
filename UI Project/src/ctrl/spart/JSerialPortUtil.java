@@ -1,53 +1,41 @@
 package ctrl.spart;
-/**
- * @Description: Based on RXTXComm, deprecated. Use JSerialPortUtil instead.
- * @Author: megre
- * @Email: renhao.x@seu.edu.cn
- * @Date: 2023/3/30 15:21
- */
-
-
-import gnu.io.*;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.TooManyListenersException;
+import com.fazecast.jSerialComm.SerialPort;
+import com.fazecast.jSerialComm.SerialPortDataListener;
 
-public class SerialPortUtil {
-
-    private static SerialPortUtil fSerialPortUtil = null;
+public class JSerialPortUtil {
+	
+	private static JSerialPortUtil fSerialPortUtil = null;
     
     private SerialPort fSerialPort;
     private String fPortName;
 
     static {
         if (fSerialPortUtil == null) {
-            fSerialPortUtil = new SerialPortUtil();
+            fSerialPortUtil = new JSerialPortUtil();
         }
     }
 
-    private SerialPortUtil() {
+    private JSerialPortUtil() {
     }
 
-    public static SerialPortUtil instance() {
+    public static JSerialPortUtil instance() {
         if (fSerialPortUtil == null) {
-            fSerialPortUtil = new SerialPortUtil();
+            fSerialPortUtil = new JSerialPortUtil();
         }
         return fSerialPortUtil;
     }
 
     public ArrayList<String> listPorts() {
-        @SuppressWarnings("unchecked")
-		Enumeration<CommPortIdentifier> portList = CommPortIdentifier.getPortIdentifiers();
+    	ArrayList<String> portNameList = new ArrayList<>();
+    	SerialPort[] ports = SerialPort.getCommPorts();
 
-        ArrayList<String> portNameList = new ArrayList<>();
-
-        while (portList.hasMoreElements()) {
-            String portName = portList.nextElement().getName();
-            portNameList.add(portName);
+        for (SerialPort p: ports) {
+            portNameList.add(p.getSystemPortName());
         }
 
         return portNameList;
@@ -57,29 +45,16 @@ public class SerialPortUtil {
     public SerialPort open(String portName, int baudrate, int databits, int stopbatis, int parity) {
     	fPortName = portName;
     	
-        try {
-            CommPortIdentifier portIdentifier = CommPortIdentifier.getPortIdentifier(portName);
-            CommPort commPort = portIdentifier.open(portName, 2000);
-            if (commPort instanceof SerialPort) {
-                fSerialPort = (SerialPort) commPort;
-                try {
-                    fSerialPort.setSerialPortParams(baudrate, databits, stopbatis, SerialPort.PARITY_NONE);
-                } catch (UnsupportedCommOperationException e) {
-                    e.printStackTrace();
-                }
+        fSerialPort = SerialPort.getCommPort(portName); 
+        fSerialPort.setComPortParameters(baudrate, databits, stopbatis, parity);
+        fSerialPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_BLOCKING, 2000, 0);
 
-                System.out.println("Open " + portName + " sucessfully");
-                return fSerialPort;
-            } else {
-                System.err.println("Not serial port");
-            }
-        } catch (NoSuchPortException e) {
-            System.err.println("Cann't find port");
-            e.printStackTrace();
-        } catch (PortInUseException e) {
-            System.err.println("Port is in use");
-            e.printStackTrace();
-        }
+        if (fSerialPort.openPort()) {
+            System.out.println("Port " + portName + " opened successfully.");
+            return fSerialPort;
+        } 
+        
+        System.out.println("Unable to open " + portName);
         return null;
     }
 
@@ -87,13 +62,13 @@ public class SerialPortUtil {
         fPortName = null;
         
         if (fSerialPort != null) { 
-            fSerialPort.close();
+            fSerialPort.closePort();
             fSerialPort = null;
         }
     }
     
     public boolean isOpen() {
-    	return fSerialPort != null;
+    	return fSerialPort != null && fSerialPort.isOpen();
     }
     
     public String getPortName() {
@@ -149,29 +124,22 @@ public class SerialPortUtil {
         return  bytes;
     }
 
-    public void addListener(SerialPortEventListener listener){
+    public void addListener(SerialPortDataListener listener){
     	if(fSerialPort == null) return;
     	
         try {
-            fSerialPort.addEventListener(listener);
-            fSerialPort.notifyOnDataAvailable(true);
-            fSerialPort.notifyOnBreakInterrupt(true);
-
-        }catch (TooManyListenersException e){
-            System.err.println("Too Many Listeners");
+            fSerialPort.addDataListener(listener);
+        }catch (Exception e){
             e.printStackTrace();
         }
     }
 
-    public void removeListener(SerialPortEventListener listener){
-        fSerialPort.removeEventListener();
+    public void removeListener(SerialPortDataListener listener){
+        fSerialPort.removeDataListener();
     }
     
     public static void main(String[] args) {
     	ArrayList<String> ports = fSerialPortUtil.listPorts();
     	System.out.println(ports);  
     }
-    
 }
-
-

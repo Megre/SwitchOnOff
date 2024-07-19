@@ -1,13 +1,13 @@
 package ctrl.spart;
 
 import java.util.ArrayList;
+
 import java.util.Queue;
-import java.util.TooManyListenersException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import gnu.io.SerialPort;
-import gnu.io.SerialPortEvent;
-import gnu.io.SerialPortEventListener;
+import com.fazecast.jSerialComm.SerialPortDataListener;
+import com.fazecast.jSerialComm.SerialPort;
+import com.fazecast.jSerialComm.SerialPortEvent;
 
 /** 
  * 
@@ -15,12 +15,12 @@ import gnu.io.SerialPortEventListener;
  * @email megre@vip.qq.com
  * @version created on: 2023-10-27 16:15:20
  */
-public class SwitchState implements SerialPortEventListener {
+public class SwitchState implements SerialPortDataListener {
 	private static int CMD_CLOSE = 0xC0;
 	
 	private StatePresenter fPresenter;	
 	
-	private SerialPortUtil fSerialPortUtil = SerialPortUtil.instance();
+	private JSerialPortUtil fSerialPortUtil = JSerialPortUtil.instance();
 	
 	private Queue<Integer> fTaskQueue = new ConcurrentLinkedQueue<Integer>();
 	private Thread fTaskThread;
@@ -53,8 +53,8 @@ public class SwitchState implements SerialPortEventListener {
 	
 	public boolean openPort(String portname) {
 		fSerialPortUtil.close();
-		fSerialPortUtil.open(portname, 4800, 
-				SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
+		fSerialPortUtil.open(portname, 9600, 
+				8, SerialPort.ONE_STOP_BIT, SerialPort.NO_PARITY);
 		fSerialPortUtil.addListener(this);
 		return fSerialPortUtil.isOpen();
 	}
@@ -67,6 +67,7 @@ public class SwitchState implements SerialPortEventListener {
 	private void disconnect() {
     	fSerialPortUtil.close();
     	updateState((byte) 0); 
+    	updateState(false);
 	}
 	
 	public void pushCmd(int cmd) {
@@ -115,25 +116,6 @@ public class SwitchState implements SerialPortEventListener {
 		fTaskThread.start();		
 	}
 	
-	/**
-	 * @see gnu.io.SerialPortEventListener#serialEvent(gnu.io.SerialPortEvent)
-	 */
-	@Override
-	public void serialEvent(SerialPortEvent arg0) {
-		int eventType = arg0.getEventType();
-        if (eventType == SerialPortEvent.DATA_AVAILABLE) {            
-            
-	        // read response
-            byte[] bytes = fSerialPortUtil.read();
-            if(bytes != null) {
-            	updateState(bytes[0]);
-            }
-            updateState(bytes != null);
-        }
-        else if(eventType == SerialPortEvent.BI) {
-        	System.out.println("SerialPortEvent.BI");
-        }
-	}
 	
 	public boolean isConnected() {
 		return fSerialPortUtil.isOpen();
@@ -174,15 +156,39 @@ public class SwitchState implements SerialPortEventListener {
 		if(fPresenter != null) fPresenter.updateUI(data);
 	}
 
+
+
+	@Override
+	public int getListeningEvents() {
+		return SerialPort.LISTENING_EVENT_DATA_AVAILABLE;
+	}
+	
+
+	@Override
+	public void serialEvent(SerialPortEvent event) {
+		try {
+			if (event.getEventType() == SerialPort.LISTENING_EVENT_DATA_AVAILABLE) {
+		        // read response
+	            byte[] bytes = fSerialPortUtil.read();
+	            if(bytes != null) {
+	            	updateState(bytes[0]);
+	            }
+	            updateState(bytes != null);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}
+	
 	/**
 	 * @param args
-	 * @throws TooManyListenersException 
 	 */
-	public static void main(String args[]) throws InterruptedException, TooManyListenersException {
+	public static void main(String args[])  {
 		SwitchState switchControl = new SwitchState();
         ArrayList<String> port = switchControl.listSerialPorts();
-        System.out.println("发现全部串口：" + port);
-        if(switchControl.openPort("COM8")) {
+        System.out.println(port);
+        if(switchControl.openPort("COM3")) {
         	switchControl.startTasker();
         }    
 
