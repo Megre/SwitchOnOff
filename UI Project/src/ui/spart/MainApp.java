@@ -4,6 +4,7 @@ import java.awt.EventQueue;
 
 import javax.swing.JFrame;
 import javax.swing.JScrollPane;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
@@ -26,6 +27,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.JTextField;
 import javax.swing.JLabel;
 import java.awt.Font;
+import java.awt.SystemTray;
 import java.awt.Toolkit;
 
 /** 
@@ -40,7 +42,7 @@ public class MainApp {
 	
 	private StatePresenter fPresenter;
 	
-	private JFrame frame;
+	private SysTrayFrame frame;
 	private JTextField txtSwitchOne;
 	private JTextField txtSwitchTwo;
 	private JTextField txtSwitchThree;
@@ -102,9 +104,11 @@ public class MainApp {
 	 * Initialize the contents of the frame.
 	 */
 	private void initialize() {
-		frame = new JFrame();
+		frame = new SysTrayFrame();
 		frame.setBackground(Color.WHITE);
 		frame.getContentPane().setBackground(Color.WHITE);
+		frame.setIconImage(Images.DISCONNECT.getImage());
+		frame.initTray(Images.DISCONNECT);
 		
 		Toolkit kit = Toolkit.getDefaultToolkit();
 		frame.setBounds((kit.getScreenSize().width-250)/2, (kit.getScreenSize().height-433)/2, 250, 433);
@@ -115,6 +119,11 @@ public class MainApp {
             	getModel().closePort();
             	getModel().saveConfig();
                 frame.dispose();
+            }
+            public void windowIconified(WindowEvent e){
+                if(SystemTray.isSupported()){
+                    frame.setVisible(false);
+                }
             }
         });
 		
@@ -261,7 +270,12 @@ public class MainApp {
 			
 			@Override
 			public void run() {
-				btnConnect.setIcon(connected?Images.CONNECT:Images.DISCONNECT);				
+				final ImageIcon newIcon = connected?Images.CONNECT:Images.DISCONNECT;
+				if(newIcon == btnConnect.getIcon()) return;
+				
+				btnConnect.setIcon(newIcon);		
+				frame.updateTray(newIcon);
+				frame.setIconImage(newIcon.getImage());
 			}
 		});
 	}
